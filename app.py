@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for
+import uuid
 
 
 app = Flask(__name__, template_folder='templates')
@@ -7,11 +8,19 @@ app = Flask(__name__, template_folder='templates')
 # In the future I will connect this to a database to store tasks and priorities
 tasks = []
 
+
+# This is for sorting the tasks by higher to lower priority
+priorityOrder = {"high": 1, "medium": 2, "low": 3}
+
+
+
 # Loading the tasks and connecting to index.html
 # Basically the home page
+# Added sortedTasks which uses lambda (inline function) to sort the tasks by priority
 @app.route('/')
 def index():
-    return render_template("index.html", tasks=tasks)
+    sortedTasks = sorted(tasks, key=lambda x: priorityOrder[x['priority']])
+    return render_template("index.html", tasks=sortedTasks)
 
 
 #Adds a task to a list with a name and a priority
@@ -20,36 +29,47 @@ def index():
 def add():
     task = request.form.get('task')
     priority = request.form.get('priority')
-    tasks.append({"task": task, "done": False, "priority": priority})
+    id = str(uuid.uuid4())
+    tasks.append({"task": task, "done": False, "priority": priority, "id": id})
     return redirect(url_for('index'))
 
 
 # Edits a task in the list, it connects to edit.html which loads a page available to edit name and priority of the task 
 # returns to index.html after edited
-@app.route("/edit/<int:index>", methods=['GET', 'POST'])
-def edit(index):
-    task = tasks[index]
+# with added sorting, now function gets id, find it and it edits the task
+@app.route("/edit/<string:taskID>", methods=['GET', 'POST'])
+def edit(taskID):
+    for i in range(len(tasks)):
+        if tasks[i]['id'] == taskID:
+            task = tasks[i]
+            break
     if request.method == 'POST':
         task['task'] = request.form.get('task')
         task['priority'] = request.form.get('priority')
         return redirect(url_for('index'))
     else:
-        return render_template("edit.html", task=task, index=index)
+        return render_template("edit.html", task=task, taskID=taskID)
 
 
 # checks the item off
 # I used not done because if i want to uncheck it again I can always just click check again
-@app.route("/check/<int:index>")
-def check(index,):
-    tasks[index]['done'] = not tasks[index]['done']
+@app.route("/check/<string:taskID>")
+def check(taskID):
+    for i in range(len(tasks)):
+        if tasks[i]['id'] == taskID:
+            tasks[i]['done'] = not tasks[i]['done']
+            break
     return redirect(url_for('index'))
 
 
 
 # Deletes the task from the list. Simple as del is already built in python
-@app.route("/delete/<int:index>")
-def delete(index):
-    del tasks[index]
+@app.route("/delete/<string:taskID>")
+def delete(taskID):
+    for i in range(len(tasks)):
+        if tasks[i]['id'] == taskID:
+            del tasks[i]
+            break
     return redirect(url_for('index'))
 
 
