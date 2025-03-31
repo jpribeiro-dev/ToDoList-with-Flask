@@ -12,6 +12,12 @@ tasks = []
 # This is for sorting the tasks by higher to lower priority
 priorityOrder = {"high": 1, "medium": 2, "low": 3}
 
+def findtaskID(taskID):
+    for i in range(len(tasks)):
+        if tasks[i]['id'] == taskID:
+            return i
+    return None
+
 
 
 # Loading the tasks and connecting to index.html
@@ -39,10 +45,9 @@ def add():
 # with added sorting, now function gets id, find it and it edits the task
 @app.route("/edit/<string:taskID>", methods=['GET', 'POST'])
 def edit(taskID):
-    for i in range(len(tasks)):
-        if tasks[i]['id'] == taskID:
-            task = tasks[i]
-            break
+    index = findtaskID(taskID)
+    if index is not None:
+        task = tasks[index]
     if request.method == 'POST':
         task['task'] = request.form.get('task')
         task['priority'] = request.form.get('priority')
@@ -55,10 +60,9 @@ def edit(taskID):
 # I used not done because if i want to uncheck it again I can always just click check again
 @app.route("/check/<string:taskID>")
 def check(taskID):
-    for i in range(len(tasks)):
-        if tasks[i]['id'] == taskID:
-            tasks[i]['done'] = not tasks[i]['done']
-            break
+    index = findtaskID(taskID)
+    if index is not None:
+        tasks[index]['done'] = not tasks[index]['done']
     return redirect(url_for('index'))
 
 
@@ -66,10 +70,9 @@ def check(taskID):
 # Deletes the task from the list. Simple as del is already built in python
 @app.route("/delete/<string:taskID>")
 def delete(taskID):
-    for i in range(len(tasks)):
-        if tasks[i]['id'] == taskID:
-            del tasks[i]
-            break
+    index = findtaskID(taskID)
+    if index is not None:
+        del tasks[index]
     return redirect(url_for('index'))
 
 
