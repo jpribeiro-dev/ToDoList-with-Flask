@@ -22,10 +22,9 @@ def findtaskID(taskID):
 
 # Loading the tasks and connecting to index.html
 # Basically the home page
-# Added sortedTasks which uses lambda (inline function) to sort the tasks by priority
 @app.route('/')
 def index():
-    sortedTasks = sorted(tasks, key=lambda x: priorityOrder[x['priority']])
+    sortedTasks = performSort('bypriority')
     return render_template("index.html", tasks=sortedTasks)
 
 
@@ -76,7 +75,24 @@ def delete(taskID):
     return redirect(url_for('index'))
 
 
+#sort function that receives form from html and calls helper sort function that sorts based on way of sorting
+@app.route("/filter", methods=['POST'])
+def sort():
+    if request.method == 'POST':
+        sortOpt = request.form.get('sortOpt')
+        sortedTasks = performSort(sortOpt)
+        return render_template("index.html", tasks=sortedTasks)
+    
 
+        
+
+
+#helper function to perform sort
+def performSort(method):
+    if method == 'bypriority':
+        return sorted(tasks, key=lambda x: priorityOrder[x['priority']])
+    
+    return tasks
 
 
 # RUnning the app
