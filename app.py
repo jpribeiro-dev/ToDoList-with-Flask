@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, session
 import uuid
+from datetime import datetime
 
 #import session to keep the same sorting method active when page refreshed.
 app = Flask(__name__, template_folder='templates')
@@ -38,13 +39,15 @@ def index():
 def add():
     task = request.form.get('task')
     priority = request.form.get('priority')
+    dueDate = request.form.get('duedate') 
 
+    #throw error message when task is empty name
     if not task:
         session['errorMessage'] = 'Name of task should not be empty. Thanks!'
         return redirect(url_for('index'))
 
     id = str(uuid.uuid4())
-    tasks.append({"task": task, "done": False, "priority": priority, "id": id})
+    tasks.append({"task": task, "done": False, "priority": priority, "dueDate": dueDate, "id": id})
 
     if session['errorMessage']:
         session['errorMessage'] = None
@@ -67,6 +70,7 @@ def edit(taskID):
 
         taskName = request.form.get('task')
 
+        #throw error to html if task name is empty
         if not taskName:
             session['errorMessage'] = 'Name of task should not be empty. Thanks!'
             errorMessage = session['errorMessage']
@@ -74,6 +78,7 @@ def edit(taskID):
         
         task['task'] = request.form.get('task')
         task['priority'] = request.form.get('priority')
+        task['dueDate'] = request.form.get('dueDate')
 
 
         return redirect(url_for('index'))
@@ -119,6 +124,8 @@ def sort():
 def performSort(method):
     if method == 'bypriority':
         return sorted(tasks, key=lambda x: priorityOrder[x['priority']])
+    elif method == 'byduedate':
+        return sorted(tasks, key=lambda x:datetime.strptime(x.get('dueDate') or '2039-01-01', "%Y-%m-%d"))
     
     return tasks
 

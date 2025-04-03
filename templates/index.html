@@ -12,6 +12,7 @@
         <select name = 'sortOpt'>
             <option value = "bypriority" {% if currSortMeth == 'bypriority' %}selected{% endif %}>Sort by Priority</option>
             <option value = "bydate" {% if currSortMeth == 'bydate' %}selected{% endif %}>Sort by added date</option>
+            <option value = "byduedate" {% if currSortMeth == 'byduedate' %}selected{% endif %}>Sort by Due Date</option>
         </select>
         <button type="submit">Save</button>
     </form>
@@ -22,6 +23,7 @@
                 <input type = "checkbox" name = "done"{% if task['done'] %} checked {% endif %} disabled onchange="this.form.submit()">
                 <span{% if task['done'] %} style = "text-decoration: line-through" {% endif %}>{{ task['task'] }}</span>
                 <span>{{task['priority']}}</span>
+                <span>{{task['dueDate']}}</span>
                 <a href="{{ url_for('check', taskID = task.id)}}">Check</a>
                 <a href="{{ url_for('edit', taskID = task.id)}}">Edit</a>
                 <a href="{{ url_for('delete', taskID = task.id)}}">Delete</a>
@@ -35,6 +37,8 @@
             <option value="medium">Medium</option>
             <option value="low">Low</option>
     </select>
+        Optional:
+        <input type="date" name = "duedate">
         <button type="submit">Add Task</button>
 
         {% if errorMessage %}

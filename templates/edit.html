@@ -13,6 +13,7 @@
             <option value = "medium"{%if task['priority'] == 'medium'%}selected{% endif %}>Medium</option>
             <option value = "low"{%if task['priority'] == 'low'%}selected{% endif %}>Low</option>
         </select>
+        <input type = "date" name = "dueDate" value = "{{task['dueDate']}}">
         <button type="submit">Save</button>
         {% if errorMessage %}
             <div style = "color:red; margin-top: 5px;">{{errorMessage}}</div>
