@@ -28,7 +28,8 @@ def findtaskID(taskID):
 def index():
     sortMethod = session.get('sortMethod', 'bypriority')
     sortedTasks = performSort(sortMethod)
-    return render_template("index.html", tasks=sortedTasks, currSortMeth=sortMethod)
+    errorMessage = session.get('errorMessage', None)
+    return render_template("index.html", tasks=sortedTasks, currSortMeth=sortMethod, errorMessage=errorMessage)
 
 
 #Adds a task to a list with a name and a priority
@@ -37,8 +38,17 @@ def index():
 def add():
     task = request.form.get('task')
     priority = request.form.get('priority')
+
+    if not task:
+        session['errorMessage'] = 'Name of task should not be empty. Thanks!'
+        return redirect(url_for('index'))
+
     id = str(uuid.uuid4())
     tasks.append({"task": task, "done": False, "priority": priority, "id": id})
+
+    if session['errorMessage']:
+        session['errorMessage'] = None
+
     return redirect(url_for('index'))
 
 
@@ -48,11 +58,24 @@ def add():
 @app.route("/edit/<string:taskID>", methods=['GET', 'POST'])
 def edit(taskID):
     index = findtaskID(taskID)
+
+    if session['errorMessage']:
+        session['errorMessage'] = None
     if index is not None:
         task = tasks[index]
     if request.method == 'POST':
+
+        taskName = request.form.get('task')
+
+        if not taskName:
+            session['errorMessage'] = 'Name of task should not be empty. Thanks!'
+            errorMessage = session['errorMessage']
+            return render_template("edit.html", task=task, taskID=taskID, errorMessage = errorMessage)
+        
         task['task'] = request.form.get('task')
         task['priority'] = request.form.get('priority')
+
+
         return redirect(url_for('index'))
     else:
         return render_template("edit.html", task=task, taskID=taskID)

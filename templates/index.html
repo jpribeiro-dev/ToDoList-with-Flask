@@ -36,6 +36,10 @@
             <option value="low">Low</option>
     </select>
         <button type="submit">Add Task</button>
+
+        {% if errorMessage %}
+            <div style = "color:red; margin-top: 5px;">{{errorMessage}}</div>
+        {% endif %}
     </form>
 </body>
 </html>
