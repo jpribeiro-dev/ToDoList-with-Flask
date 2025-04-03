@@ -10,8 +10,8 @@
     <h2>
         <form action = "{{url_for('sort')}}" method = "POST">
         <select name = 'sortOpt'>
-            <option value = "bypriority">Sort by Priority</option>
-            <option value = "bydate">Sort by added date</option>
+            <option value = "bypriority" {% if currSortMeth == 'bypriority' %}selected{% endif %}>Sort by Priority</option>
+            <option value = "bydate" {% if currSortMeth == 'bydate' %}selected{% endif %}>Sort by added date</option>
         </select>
         <button type="submit">Save</button>
     </form>

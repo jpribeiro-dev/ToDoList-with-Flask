@@ -1,8 +1,9 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, session
 import uuid
 
-
+#import session to keep the same sorting method active when page refreshed.
 app = Flask(__name__, template_folder='templates')
+app.secret_key = 'PalitoGoat3047'
 
 # Start with an empty list of tasks that will be stored in memory
 # In the future I will connect this to a database to store tasks and priorities
@@ -21,11 +22,13 @@ def findtaskID(taskID):
 
 
 # Loading the tasks and connecting to index.html
-# Basically the home page
+# Now that i added sessions, get the sorting method from session and send it to html as well
+# if none, default is by priority
 @app.route('/')
 def index():
-    sortedTasks = performSort('bypriority')
-    return render_template("index.html", tasks=sortedTasks)
+    sortMethod = session.get('sortMethod', 'bypriority')
+    sortedTasks = performSort(sortMethod)
+    return render_template("index.html", tasks=sortedTasks, currSortMeth=sortMethod)
 
 
 #Adds a task to a list with a name and a priority
@@ -76,12 +79,12 @@ def delete(taskID):
 
 
 #sort function that receives form from html and calls helper sort function that sorts based on way of sorting
-@app.route("/filter", methods=['POST'])
+# stores the current sorting method in session so when it refreshes, it would be the same
+@app.route("/sort", methods=['POST'])
 def sort():
-    if request.method == 'POST':
-        sortOpt = request.form.get('sortOpt')
-        sortedTasks = performSort(sortOpt)
-        return render_template("index.html", tasks=sortedTasks)
+    sortOpt = request.form.get('sortOpt')
+    session['sortMethod'] = sortOpt
+    return redirect(url_for('index'))
     
 
         
@@ -89,6 +92,7 @@ def sort():
 
 #helper function to perform sort
 # receives by priority or by date and adjusts accordingly
+# if not by priority it just returns tasks since it is already sorted by added date
 def performSort(method):
     if method == 'bypriority':
         return sorted(tasks, key=lambda x: priorityOrder[x['priority']])
