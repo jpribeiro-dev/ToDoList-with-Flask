@@ -88,6 +88,7 @@ def sort():
 
 
 #helper function to perform sort
+# receives by priority or by date and adjusts accordingly
 def performSort(method):
     if method == 'bypriority':
         return sorted(tasks, key=lambda x: priorityOrder[x['priority']])
@@ -96,5 +97,6 @@ def performSort(method):
 
 
 # RUnning the app
+
 if __name__ == "__main__":
     app.run(debug = True)
