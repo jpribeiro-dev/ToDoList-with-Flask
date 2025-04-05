@@ -29,8 +29,10 @@ def findtaskID(taskID):
 def index():
     sortMethod = session.get('sortMethod', 'bypriority')
     sortedTasks = performSort(sortMethod)
+    hideC = session.get('hideC', False)
+    hideCtasks = hideCompletedTasksHelper(hideC, sortedTasks)
     errorMessage = session.get('errorMessage', None)
-    return render_template("index.html", tasks=sortedTasks, currSortMeth=sortMethod, errorMessage=errorMessage)
+    return render_template("index.html", tasks=hideCtasks, currSortMeth=sortMethod, errorMessage=errorMessage, hideC=hideC)
 
 
 #Adds a task to a list with a name and a priority
@@ -49,7 +51,7 @@ def add():
     id = str(uuid.uuid4())
     tasks.append({"task": task, "done": False, "priority": priority, "dueDate": dueDate, "id": id})
 
-    if session['errorMessage']:
+    if session.get('errorMessage'):
         session['errorMessage'] = None
 
     return redirect(url_for('index'))
@@ -73,7 +75,7 @@ def edit(taskID):
         #throw error to html if task name is empty
         if not taskName:
             session['errorMessage'] = 'Name of task should not be empty. Thanks!'
-            errorMessage = session['errorMessage']
+            errorMessage = session.get('errorMessage')
             return render_template("edit.html", task=task, taskID=taskID, errorMessage = errorMessage)
         
         task['task'] = request.form.get('task')
@@ -113,9 +115,29 @@ def sort():
     sortOpt = request.form.get('sortOpt')
     session['sortMethod'] = sortOpt
     return redirect(url_for('index'))
+
+
+
+@app.route("/hideCompletedTasks", methods=['POST'])
+def hideCompletedTasks():
+    session['hideC'] = not session.get('hideC', False)
+    return redirect(url_for('index'))
+
+
     
 
-        
+
+def hideCompletedTasksHelper(hideC, hideCTasks):
+    if (hideC):
+        filtered = []
+        for i in range(len(hideCTasks)):
+            if not hideCTasks[i]['done']:
+                filtered.append(hideCTasks[i])
+
+        return filtered
+    
+    return hideCTasks
+
 
 
 #helper function to perform sort
