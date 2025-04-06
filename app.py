@@ -77,16 +77,26 @@ def add():
 @app.route("/edit/<string:taskID>", methods=['GET', 'POST'])
 def edit(taskID):
 
-    if session['errorMessage']:
+    if session.get('errorMessage'):
         session['errorMessage'] = None
 
     # connect to the database and fetch the task with the given taskID
     conn = db.connect()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM TASKS WHERE id = %s", (taskID,))
-    task = cursor.fetchone() # fetchone() returns a single row, so I can use it directly
+    taskD = cursor.fetchone() # fetchone() returns a single row, so I can use it directly
     cursor.close()
     conn.close()
+
+    task = {
+        'id': taskD[0],
+        'task': taskD[1],
+        'priority': taskD[2],
+        'dueDate': taskD[3],
+        'done': taskD[4],
+        'creation': taskD[5]
+    }
+
 
     if request.method == 'POST':
 
@@ -96,11 +106,15 @@ def edit(taskID):
         if not taskName:
             session['errorMessage'] = 'Name of task should not be empty. Thanks!'
             errorMessage = session.get('errorMessage')
-            return render_template("edit.html", task=task, taskID=taskID, errorMessage = errorMessage)
+            return render_template("edit.html", task=task, errorMessage = errorMessage)
         
 
         priority = request.form.get('priority')
         dueDate = request.form.get('dueDate')
+
+        if dueDate == '':
+            dueDate = None
+            
         conn = db.connect()
         cursor = conn.cursor() 
         cursor.execute("UPDATE TASKS SET task = %s, priority = %s, dueDate = %s WHERE id = %s",
@@ -211,12 +225,15 @@ def performSortAndHideC(method, hideC):
         })
 
     
+    
     if (hideC):
         filtered = []
         for i in range(len(result)):
             if not result[i]['done']:
                 filtered.append(result[i])
 
+        cursor.close()
+        conn.close()
         return filtered
     
 
