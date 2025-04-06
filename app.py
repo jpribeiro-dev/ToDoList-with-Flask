@@ -32,11 +32,10 @@ db.init_app(app)
 @app.route('/')
 def index():
     sortMethod = session.get('sortMethod', 'bypriority')
-    sortedTasks = performSort(sortMethod)
     hideC = session.get('hideC', False)
-    hideCtasks = hideCompletedTasksHelper(hideC, sortedTasks)
+    sortedTasks = performSortAndHideC(sortMethod, hideC)
     errorMessage = session.get('errorMessage', None)
-    return render_template("index.html", tasks=hideCtasks, currSortMeth=sortMethod, errorMessage=errorMessage, hideC=hideC)
+    return render_template("index.html", tasks=sortedTasks, currSortMeth=sortMethod, errorMessage=errorMessage, hideC=hideC)
 
 
 #Adds a task to a list with a name and a priority
@@ -176,24 +175,15 @@ def hideCompletedTasks():
 
     
 
-# Helper funciton called by index  that takes the sorted tasks(users choice on sort) and returns only teh ones that are not done yet
-def hideCompletedTasksHelper(hideC, hideCTasks):
-    if (hideC):
-        filtered = []
-        for i in range(len(hideCTasks)):
-            if not hideCTasks[i]['done']:
-                filtered.append(hideCTasks[i])
-
-        return filtered
-    
-    return hideCTasks
 
 
 
-#helper function to perform sort
+
+
+#helper function to perform sort and takes the sorted tasks(users choice on sort) and returns only teh ones that are not done yet
 # receives by priority or by date and adjusts accordingly
 # if not by priority it just returns tasks since it is already sorted by added date
-def performSort(method):
+def performSortAndHideC(method, hideC):
     conn = db.connect()
     cursor = conn.cursor()
 
@@ -219,6 +209,16 @@ def performSort(method):
             'done': task[4],
             'creation': task[5]
         })
+
+    
+    if (hideC):
+        filtered = []
+        for i in range(len(result)):
+            if not result[i]['done']:
+                filtered.append(result[i])
+
+        return filtered
+    
 
     cursor.close()
     conn.close()
