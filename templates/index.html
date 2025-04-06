@@ -27,7 +27,7 @@
                 <input type = "checkbox" name = "done"{% if task['done'] %} checked {% endif %} disabled onchange="this.form.submit()">
                 <span{% if task['done'] %} style = "text-decoration: line-through" {% endif %}>{{ task['task'] }}</span>
                 <span>{{task['priority']}}</span>
-                <span>{{task['dueDate']}}</span>
+                <span>{{task['dueDate'] or ''}}</span>
                 <a href="{{ url_for('check', taskID = task.id)}}">Check</a>
                 <a href="{{ url_for('edit', taskID = task.id)}}">Edit</a>
                 <a href="{{ url_for('delete', taskID = task.id)}}">Delete</a>
