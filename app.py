@@ -1,24 +1,28 @@
 from flask import Flask, render_template, request, redirect, url_for, session
-import uuid
+from flaskext.mysql import MySQL
+import os
 from datetime import datetime
+from dotenv import load_dotenv
+
+# Loading my .env which has the DB information
+load_dotenv()
 
 #import session to keep the same sorting method active when page refreshed.
 app = Flask(__name__, template_folder='templates')
 app.secret_key = 'PalitoGoat3047'
 
-# Start with an empty list of tasks that will be stored in memory
-# In the future I will connect this to a database to store tasks and priorities
-tasks = []
+
+# Connecting to database with information from .env
+# Template from stack overlow
+db = MySQL()
+app.config['MYSQL_DATABASE_USER'] = os.getenv('DB_USER')
+app.config['MYSQL_DATABASE_PASSWORD'] = os.getenv('DB_PASSWORD')
+app.config['MYSQL_DATABASE_DB'] = os.getenv('DB_NAME')
+app.config['MYSQL_DATABASE_HOST'] = os.getenv('DB_HOST')
+db.init_app(app)
 
 
-# This is for sorting the tasks by higher to lower priority
-priorityOrder = {"high": 1, "medium": 2, "low": 3}
 
-def findtaskID(taskID):
-    for i in range(len(tasks)):
-        if tasks[i]['id'] == taskID:
-            return i
-    return None
 
 
 
@@ -43,13 +47,24 @@ def add():
     priority = request.form.get('priority')
     dueDate = request.form.get('duedate') 
 
+    if dueDate == '':
+        dueDate = None
     #throw error message when task is empty name
     if not task:
         session['errorMessage'] = 'Name of task should not be empty. Thanks!'
         return redirect(url_for('index'))
+    
+    conn = db.connect()
+    cursor = conn.cursor()
 
-    id = str(uuid.uuid4())
-    tasks.append({"task": task, "done": False, "priority": priority, "dueDate": dueDate, "id": id})
+    cursor.execute("INSERT INTO TASKS (task, priority, dueDate, done) VALUES (%s, %s, %s, %s)", 
+                   (task, priority, dueDate, False))
+    
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+
 
     if session.get('errorMessage'):
         session['errorMessage'] = None
@@ -62,12 +77,18 @@ def add():
 # with added sorting, now function gets id, find it and it edits the task
 @app.route("/edit/<string:taskID>", methods=['GET', 'POST'])
 def edit(taskID):
-    index = findtaskID(taskID)
 
     if session['errorMessage']:
         session['errorMessage'] = None
-    if index is not None:
-        task = tasks[index]
+
+    # connect to the database and fetch the task with the given taskID
+    conn = db.connect()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM TASKS WHERE id = %s", (taskID,))
+    task = cursor.fetchone() # fetchone() returns a single row, so I can use it directly
+    cursor.close()
+    conn.close()
+
     if request.method == 'POST':
 
         taskName = request.form.get('task')
@@ -78,9 +99,16 @@ def edit(taskID):
             errorMessage = session.get('errorMessage')
             return render_template("edit.html", task=task, taskID=taskID, errorMessage = errorMessage)
         
-        task['task'] = request.form.get('task')
-        task['priority'] = request.form.get('priority')
-        task['dueDate'] = request.form.get('dueDate')
+
+        priority = request.form.get('priority')
+        dueDate = request.form.get('dueDate')
+        conn = db.connect()
+        cursor = conn.cursor() 
+        cursor.execute("UPDATE TASKS SET task = %s, priority = %s, dueDate = %s WHERE id = %s",
+        (taskName, priority, dueDate, taskID))
+        conn.commit()
+        cursor.close()
+        conn.close()
 
 
         return redirect(url_for('index'))
@@ -92,9 +120,21 @@ def edit(taskID):
 # I used not done because if i want to uncheck it again I can always just click check again
 @app.route("/check/<string:taskID>")
 def check(taskID):
-    index = findtaskID(taskID)
-    if index is not None:
-        tasks[index]['done'] = not tasks[index]['done']
+    conn = db.connect()
+    cursor = conn.cursor()
+    cursor.execute("SELECT done FROM TASKS WHERE id = %s", (taskID,)) # will return only the done status and not full row
+    result = cursor.fetchone() # fetchone() returns a single row, so I can use it directly
+    
+
+    if result is not None:
+        res = result[0] # this is how i access when i select and only returns specific value and not full row
+        cursor.execute("UPDATE TASKS SET done = %s WHERE id = %s", (not res, taskID))
+        conn.commit()
+        
+
+
+    cursor.close()
+    conn.close()
     return redirect(url_for('index'))
 
 
@@ -102,9 +142,17 @@ def check(taskID):
 # Deletes the task from the list. Simple as del is already built in python
 @app.route("/delete/<string:taskID>")
 def delete(taskID):
-    index = findtaskID(taskID)
+    conn = db.connect()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM TASKS WHERE id = %s", (taskID,))
+    index = cursor.fetchone()
+
     if index is not None:
-        del tasks[index]
+        cursor.execute("DELETE FROM TASKS WHERE id = %s", (taskID,))
+        conn.commit()
+
+    cursor.close()
+    conn.close()
     return redirect(url_for('index'))
 
 
@@ -118,6 +166,8 @@ def sort():
 
 
 
+# getting the checkbox from html and setting it to not session of hideCompletedTasks
+#index calls the helper function with the sorted tasks that returns without the completed tasks
 @app.route("/hideCompletedTasks", methods=['POST'])
 def hideCompletedTasks():
     session['hideC'] = not session.get('hideC', False)
@@ -126,7 +176,7 @@ def hideCompletedTasks():
 
     
 
-
+# Helper funciton called by index  that takes the sorted tasks(users choice on sort) and returns only teh ones that are not done yet
 def hideCompletedTasksHelper(hideC, hideCTasks):
     if (hideC):
         filtered = []
@@ -144,12 +194,35 @@ def hideCompletedTasksHelper(hideC, hideCTasks):
 # receives by priority or by date and adjusts accordingly
 # if not by priority it just returns tasks since it is already sorted by added date
 def performSort(method):
+    conn = db.connect()
+    cursor = conn.cursor()
+
     if method == 'bypriority':
-        return sorted(tasks, key=lambda x: priorityOrder[x['priority']])
+        cursor.execute("SELECT * FROM TASKS ORDER BY priority")
+        sortedTasks = cursor.fetchall()
+        
     elif method == 'byduedate':
-        return sorted(tasks, key=lambda x:datetime.strptime(x.get('dueDate') or '2039-01-01', "%Y-%m-%d"))
+        cursor.execute("SELECT * FROM TASKS ORDER BY dueDate")
+        sortedTasks = cursor.fetchall()
+    else:
+        cursor.execute("SELECT * FROM TASKS ORDER BY creation")
+        sortedTasks = cursor.fetchall()
     
-    return tasks
+
+    result = []
+    for task in sortedTasks:
+        result.append({
+            'id': task[0],
+            'task': task[1],
+            'priority': task[2],
+            'dueDate': task[3],
+            'done': task[4],
+            'creation': task[5]
+        })
+
+    cursor.close()
+    conn.close()
+    return result
 
 
 # RUnning the app
