@@ -97,6 +97,10 @@ def edit(taskID):
         'creation': taskD[5]
     }
 
+    if taskD is None:
+        session['errorMessage'] = 'Task not found!'
+        return redirect(url_for('index'))
+
 
     if request.method == 'POST':
 
@@ -114,7 +118,7 @@ def edit(taskID):
 
         if dueDate == '':
             dueDate = None
-            
+
         conn = db.connect()
         cursor = conn.cursor() 
         cursor.execute("UPDATE TASKS SET task = %s, priority = %s, dueDate = %s WHERE id = %s",
